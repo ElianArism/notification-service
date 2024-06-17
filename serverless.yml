@@ -1,0 +1,40 @@
+service: notification-service-${self:provider.stage}
+
+plugins:
+  - serverless-bundle
+  - serverless-pseudo-parameters
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-1
+  memorySize: 256
+  stage: ${opt:stage, 'dev'}
+  iamRoleStatements:
+    - ${file(infraestructure/iam/send-mail.yml):SendMailIAM}
+
+custom:
+  mailSQS:
+    name: "MailSQS-Elian-${self:provider.stage}"
+    arn: !GetAtt MailSQS.Arn
+    url: !Ref MailSQS
+
+  bundle:
+    linting: false
+
+functions:
+  sendMail:
+    handler: src/handlers/send-mail.handler
+    events:
+      - sqs:
+          arn: ${self:custom.mailSQS.arn}
+          batchSize: 1 # process 1 message at a time
+resources:
+  Resources:
+    MailSQS: ${file(infraestructure/resources/mail-sqs/mail-sqs.yml):MailSQS}
+
+  # Outputs are a sls framework feature that allow us to share data between different stacks
+  # This outputs are going to be used to send messages to this queue from sls-integrator-elian / auctions-service
+  Outputs:
+    MailQueueArn: ${file(infraestructure/resources/mail-sqs/mail-sqs.yml):Outputs.MailSQSArn}
+    MailQueueUrl: ${file(infraestructure/resources/mail-sqs/mail-sqs.yml):Outputs.MailSQSUrl}

@@ -1,0 +1,6 @@
+MailSQSIAM:
+  Effect: Allow
+  Action:
+    - sqs:ReceiveMessage
+    - sqs:DeleteMessage
+  Resource: ${self:custom.mailSQS.arn}
